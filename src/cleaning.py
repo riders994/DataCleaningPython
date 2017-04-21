@@ -30,12 +30,29 @@ DumDf = pd.concat([DumDf, ProdDums], axis=1)
 #DumDf = pd.concat([DumDf, StateDums], axis=1)
 DumDf = pd.concat([DumDf, SourceDums], axis=1)
 
+def crossval():
+    model = LinearRegression()
+    return cv.cross_val_score(model,DumDf, simpLabs)
+
 X_train, X_test, y_train, y_test = cv.train_test_split(DumDf,simpLabs)
 
 model = LinearRegression()
 model.fit(X_train,y_train)
 
 model.score(X_test, y_test)
+
+def testDums(trainingcol,testcol,drop = -1, nschem = 'Dummy'):
+    if drop == -1:
+        uni = trainingcol.unique()[:-1]
+    elif drop == 1:
+        uni = trainingcol.unique()[1:]
+    elif drop == 0:
+        uni = = trainingcol.unique()
+    n = testcol.shape[0]
+    res = [np.zeros(n)[testcol == dum] = 1 for dum in uni]
+    res = np.vstack(res)
+    colns = [nschem + str(dum) for dum in uni]
+    return res, colns
 
 
 testdf = pd.read_csv('./test.csv', index_col='SalesID')
