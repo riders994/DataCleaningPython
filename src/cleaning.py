@@ -54,6 +54,8 @@ def testDums(trainingcol,testcol,drop = -1, nschem = 'Dummy'):
     colns = [nschem + str(dum) for dum in uni]
     return res, colns
 
+def colzip(col1,col2):
+    return np.array(["{}_{}".format(a,b) for a,b in zip(col1.astype(str), col2.astype(str))])
 
 testdf = pd.read_csv('./test.csv', index_col='SalesID')
 
