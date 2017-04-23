@@ -1,3 +1,5 @@
+#Current Version: 1.0
+
 import math
 import pandas as pd
 import numpy as np
@@ -9,152 +11,91 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import AdaBoostRegressor
 
-glob={}
-
-def run():
-    flds = ['SalePrice','ModelID','YearMade','UsageBand','ProductGroup','datasource']
-    dumb = ['UsageBand','ProductGroup','ModelID','YearMade']
-    model =  train_model(flds,dumb)
-    flds2 = ['ModelID','YearMade','UsageBand','ProductGroup','datasource']
-    run_testing(model,flds2,dumb)
-    pass
-
-def train_model(flsd,dumflds):
-
-    df = pd.read_csv('./Train.csv',index_col='SalesID')
-    df_X, df_y = clean_data(df,flsd,dumflds)
-    print
-    return fit_test(df_X,df_y)
-
-    pass
 
 
-def clean_data(df,flds,dumflds, test =1):
-    ##Creating Initial Test
- #['SalePrice','ModelID','YearMade','MachineHoursCurrentMeter','UsageBand','ProductGroup','datasource']
+def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dates = False, linear = False, dateform = '%m/%d/%Y'):
+    """
+    Data cleaning function. As of version 1.0, will take fields from original
+    data frame, make dummies apropriately, and set dates.
+    Variables:
 
-# [ 'UsageBand', 'ProductGroup']
-    # uni = df['MachineID'].unique()
-    # for ID in uni:
-    #     df['YearMade'][df['MachineID'] == ID] = df['YearMade'][df['MachineID'] == ID][df['YearMade'][df['MachineID'] == ID] > 1000].min()
-    df_temp=df.copy()
-    df_temp = df_temp[flds]
-    #df_temp.dropna(axis=0, inplace = 1)
-    simpLabs=[]
-    if test:
-        simpLabs = df_temp.pop('SalePrice')
-    if 'saledate' in flds:
-        df_temp['saledate'] = pd.to_datetime(df_temp['saledate'], format = '%m/%d/%Y', exact = 0)
+    df: Pandas dataframe to be cleaned. Will add in Numpy functionality at later
+        date,
 
-    df_temp = simp_modelID(df_temp)
+    fields: List of fields (strings) from original dataframe to be left as is.
+            If left blank, will work on dummies only, or will return original
+            dataframe.
 
-    for f in dumflds:
-        temp_dumb = pd.get_dummies(df_temp[f], prefix = f+'_', drop_first = True, dummy_na=True)
+    dummys: List of fields (strings) from original dataframe to be turned into
+            dummy variables. If left blank, will return as specified by fields
+            and dates.
 
-        glob[f]=temp_dumb.columns.values
+    threshold: Minimum threshold for dummy variables. If there are fewer
+               indicators than threshold, will change to 'Unspecified' before
+               generating.
 
-        df_temp = pd.concat([df_temp, temp_dumb], axis=1)
-        df_temp.drop(f, inplace=True, axis=1)
-    #df_temp.MachineHoursCurrentMeter[df_temp.MachineHoursCurrentMeter.isnull()] = 0
-    print df_temp.shape
-    return df_temp, simpLabs
+    y: String. If set, will output Numpy array of specified label column along
+       with cleaned dataframe.
 
-def simp_modelID(df):
-    x = df['ModelID'].value_counts()
-    x = x[(x.values<500)].index
-    df1=df.copy()
-    df1['ModelID_use'] = df['ModelID'].astype(str)
-    df1['ModelID_use'][df1['ModelID'].isin(x)] = 'Other Val'
-    df1['ModelID']= df1['ModelID_use']
-    df1.drop('ModelID_use',inplace=True,axis=1)
-    print
-    return df1
+    dates: String. If set, will convert column to datetime for new frame.
 
-def crossval(X, y):
-    model = RandomForestRegressor(n_estimators = 100)
-    return cv.cross_val_score(model, X, y)
+    linear: Boolean. If false, will create categorical dummies. If true, will
+            create true dummies (0/1).
+    dateform: Datetime parsable string for formatting date. Default is US
+              standard
 
-def fit_test(X,y):
+    Returns: Cleaned dataframe and either False, or value to be predicted as
+             Numpy array.
+    """
+    n = df.shape[0]
+    used = []
+    ind = np.array(xrange(n))
 
-    X_train, X_test, y_train, y_test = cv.train_test_split(X,y)
+    """
+    This sequence of if statements will run through all of the functions to set
+    up the result dataframe.
+    """
 
-    model2 = RandomForestRegressor()
-    model2.fit(X_train,y_train)
-    print model2.score(X_test,y_test)
-    return model2
+    if fields:
+        resdf = df[fields]
+        used.append('fields')
+    else:
+        resdf = pd.Dataframe(index = ind)
 
-def testDums(trainingcol,testcol,drop = -1, nschem = 'Dummy'):
-    if drop == -1:
-        uni = trainingcol.unique()[:-1]
-    elif drop == 1:
-        uni = trainingcol.unique()[1:]
-    elif drop == 0:
-        uni == trainingcol.unique()
-    n = testcol.shape[0]
-    res = []
-    for dum in uni:
-        zs = np.zeros(n)
-        zs[testcol == dum] = 1
-        res.append(zs)
-    res = np.vstack(res)
-    colns = [nschem + str(dum) for dum in uni]
-    return pd.DataFrame(dict(zip(colns,res)))
+    if dummys:
+        dummies = dummygen(df, dummys, linear)
+        used.append('dummys')
+    if y:
+        y = df[y].as_matrix()
 
-def colzip(col1,col2):
-    return np.array(["{}_{}".format(a,b) for a,b in zip(col1.astype(str), col2.astype(str))])
+    if dates:
+        used.append('dates')
+        resdf[dates] = pd.to_datetime(df[dates], format = dateform)
 
-def clean_data_test(df,flds,dumflds):
-    ##Creating Initial Test
- #['SalePrice','ModelID','YearMade','MachineHoursCurrentMeter','UsageBand','ProductGroup','datasource']
+    if not used:
+        print 'Why did you even run this function?'
 
-# [ 'UsageBand', 'ProductGroup']
+    return resdf, y
 
-    df_temp=df.copy()
-    df_temp = df_temp[flds]
-    #df_temp.dropna(axis=0, inplace = 1)
+def dummygen(df, dummys, linear = False, threshold = 0):
+    n = df.shape[0]
+    resdf = pd.Dataframe(index = xrange(n))
 
-    if 'saledate' in flds:
-        df_temp['saledate'] = pd.to_datetime(df_temp['saledate'], format = '%m/%d/%Y', exact = 0)
+    if type(threshold) != int:
+        if len(threshold) != len(dummys):
+            print 'Error: Threshold count does not match Dummy count'
+            return
 
-    df_temp = simp_modelID(df_temp)
+    if linear:
+        for dum in dummys:
+            resdf.concat((resdf, pd.get_dummies(df[dum], prefix = dum, dummy_na = 1, drop_first = 1)), axis = 1)
+    else:
+        for dum in dummys:
+            cats = np.zeros(n)
+            col = df[dum].as_matrix()
+            uni = np.unique(col)
+            for key, value in enumerate(uni):
+                cats[col == value] = key
+            resdf[(dum + '_categorical')] = cats
 
-    for f in dumflds:
-        temp_dumb = pd.get_dummies(df_temp[f], prefix = f+'_', drop_first = True, dummy_na=True)
-        temp_dumb = fill_dumbs(temp_dumb,glob.get(f))
-        #glob[f]=temp_dumb.columns.values
-
-        df_temp = pd.concat([df_temp, temp_dumb], axis=1)
-        df_temp.drop(f, inplace=True, axis=1)
-    #df_temp.MachineHoursCurrentMeter[df_temp.MachineHoursCurrentMeter.isnull()] = 0
-    print
-    return df_temp
-
-def fill_dumbs(temp,temp2):
-    for i in temp2:
-        if i not in temp.columns.values:
-            temp[i]=np.zeros(temp.shape[0])
-    print
-    return temp
-
-def run_testing(model,flds,dumflds):
-
-    test_df = pd.read_csv('./test.csv', index_col='SalesID')
-
-    test_df = clean_data_test(test_df, flds, dumflds)
-    print
-
-
-    preds = model.predict(test_df)
-    IDs = np.array(test_df.index)
-    res = pd.DataFrame({
-            'SalePrice': preds
-        })
-    res.index = IDs
-    res.index.name = 'SaleID'
-
-    res.to_csv('bad_predictions.csv')
-    pass
-
-
-def TTconsistency(train,test):
-    return train[test.columns.values]
+    return resdf

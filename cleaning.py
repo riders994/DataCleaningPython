@@ -32,7 +32,7 @@ def train_model(flsd,dumflds):
 def clean_data(df,flds,dumflds, test =1):
     ##Creating Initial Test
  #['SalePrice','ModelID','YearMade','MachineHoursCurrentMeter','UsageBand','ProductGroup','datasource']
-
+ 
 # [ 'UsageBand', 'ProductGroup']
     # uni = df['MachineID'].unique()
     # for ID in uni:
