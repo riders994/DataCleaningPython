@@ -4,12 +4,8 @@ import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as stats
-from pandas.tools.plotting import scatter_matrix
 from sklearn import cross_validation as cv
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import AdaBoostRegressor
+
 
 
 
@@ -99,3 +95,6 @@ def dummygen(df, dummys, linear = False, threshold = 0):
             resdf[(dum + '_categorical')] = cats
 
     return resdf
+
+def norml(column):
+    return (column - column.mean())/column.std()
