@@ -7,21 +7,25 @@ from sklearn.preprocessing import StandardScaler
 
 
 class DataCleaner(object):
-
+    """
+    Data Cleaning Class object. As of version 1.0, takes in a dictionary of fields, and operations to perform on fields, and applies those operations to a dataframe.
+    """
     def __init__(self, fld_info_dict):
         '''
-        fld_info_dict: this is a setup dict to pass in containing the names of fields and requited modifications.
-        optins:
-        'drop' : drop the given fields
-        'label' : pop off the given field from pandas dataframe
-        'dummie' : field required to make dummie fields for will match fields to testing data.
-        'boolean' : modifies field to a 0,1 boolean. in from 'field name' : 'boolean={male:1,female:0}' or 'boolean={true:1,false:0}'
+        fld_info_dict: Dictionary of string, string pairs. Each key is the name of the field/column, and the value is the operation to be performed.
+
+        Operations:
+        'drop' : Drop the given fields from the DataFrame.
+        'label' : Removes label column from frame, and stores separately.
+        'dummie' : Turns column into multiple dummy columns to add on to DataFrame
+        'boolean' : Modifies column to booleans with specified values. Ex.'gender' : 'boolean={male:1,female:0}' would change a column named 'gender' in a DataFrame to a column that contained 1s and 0s for the males and females respectively.
         '''
 
         self.fld_info_dict = fld_info_dict
-
+        self.y_val_true = False
         self.dummy_dict = {}
         self.std_scaler = None
+        self.y = None
 
 
     def clean(self, df):
@@ -32,17 +36,17 @@ class DataCleaner(object):
         X,y format.
         '''
         print self.fld_info_dict
-        for fld,funct in self.fld_info_dict.iteritems():
+        for fld, funct in self.fld_info_dict.iteritems():
             if funct == 'drop':  #drop field
                 df.drop(fld, inplace=True, axis=1)
 
             elif funct == 'label':
                 if fld in df.columns.values:
-                    y = df.pop(fld)
-                    y_val_true =  True
+                    self.y = df.pop(fld)
+                    self.y_val_true =  True
 
             elif funct == 'dummie':
-                '''makes the dummies for the given fields.  Saves the fields used in a dummy dictionay to compair when testing files are cleaned. '''
+                '''Makes the dummies for the given fields.  Saves the fields used in a dummy dictionary to compare when testing files are cleaned. '''
                 dumbs = pd.get_dummies(df[fld], prefix = fld+'_', dummy_na=True)
                 if self.dummy_dict.get(fld) == None:
                     self.dummy_dict[fld]=dumbs.columns.values
@@ -59,10 +63,7 @@ class DataCleaner(object):
                 boolean_dict = dict((k,eval(v)) for (k,v) in pairs)
                 df[fld] = df[fld].map(boolean_dict)
 
-        if y_val_true:
-            return df, y
-        else:
-            return df
+        return df, self.y
 
 
     def _test_check_dumbs(self, temp,temp2):

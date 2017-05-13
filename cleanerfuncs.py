@@ -9,14 +9,15 @@ from sklearn import cross_validation as cv
 
 
 
-def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dates = False, linear = False, dateform = '%m/%d/%Y'):
+def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dates = False, linear = False, dateform = '%m/%d/%Y', **kwargs):
     """
     Data cleaning function. As of version 1.0, will take fields from original
     data frame, make dummies apropriately, and set dates.
-    Variables:
+
+    Possible Variables:
 
     df: Pandas dataframe to be cleaned. Will add in Numpy functionality at later
-        date,
+        date.
 
     fields: List of fields (strings) from original dataframe to be left as is.
             If left blank, will work on dummies only, or will return original
@@ -36,7 +37,7 @@ def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dat
     dates: String. If set, will convert column to datetime for new frame.
 
     linear: Boolean. If false, will create categorical dummies. If true, will
-            create true dummies (0/1).
+            create boolean dummies (0/1).
     dateform: Datetime parsable string for formatting date. Default is US
               standard
 
@@ -59,7 +60,7 @@ def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dat
         resdf = pd.Dataframe(index = ind)
 
     if dummys:
-        dummies = dummygen(df, dummys, linear)
+        dummies = dummygen(df, dummys, linear, threshold)
         used.append('dummys')
     if y:
         y = df[y].as_matrix()
@@ -68,10 +69,27 @@ def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dat
         used.append('dates')
         resdf[dates] = pd.to_datetime(df[dates], format = dateform)
 
+    s = kwargs.get('str_to_num')
+    if s:
+        for column in s:
+            df[column] = numclean(df[column], kwargs.get('currency', '$'))
+
     if not used:
         print 'Why did you even run this function?'
 
     return resdf, y
+
+def numclean(col, currency = '$'):
+    for curr in currency:
+        col = col.str.replace(curr,'')
+
+    if col.str.find('%').mean() == -1:
+        col = col.astype(float)
+    else:
+        col = col.str.replace('%', '')
+        col = col.astype(float)/100
+
+    return col
 
 def dummygen(df, dummys, linear = False, threshold = 0):
     n = df.shape[0]
