@@ -11,13 +11,16 @@ from sklearn import cross_validation as cv
 
 def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dates = False, linear = False, dateform = '%m/%d/%Y', **kwargs):
     """
-    Data cleaning function. As of version 1.0, will take fields from original
-    data frame, make dummies apropriately, and set dates.
+    Data cleaning function. As of version 1.1, will take fields from original
+    data frame, make dummies apropriately, and set dates, and can convert string
+    columns to numeric, stripping currency and percents.
 
-    Possible Variables:
+    Requirements:
 
     df: Pandas dataframe to be cleaned. Will add in Numpy functionality at later
         date.
+
+    Possible Variables:
 
     fields: List of fields (strings) from original dataframe to be left as is.
             If left blank, will work on dummies only, or will return original
@@ -40,6 +43,14 @@ def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dat
             create boolean dummies (0/1).
     dateform: Datetime parsable string for formatting date. Default is US
               standard
+
+    str_to_num: List of columns. Columns will be treated as strings, and
+                converted to numeric where possible. Strips percent signs and
+                any other specified characters. Regex functionality to be added
+                in future versions.
+
+    symbols: String, or list of strings, of symbols to search and strip when
+             converting to numeric. Default is '$'.
 
     Returns: Cleaned dataframe and either False, or value to be predicted as
              Numpy array.
@@ -71,25 +82,26 @@ def clean_Data(df, fields = False, dummys = False, threshold = 0, y = False, dat
 
     s = kwargs.get('str_to_num')
     if s:
+        used.append('nums')
         for column in s:
-            df[column] = numclean(df[column], kwargs.get('currency', '$'))
+            resdf[column] = numclean(df[column], kwargs.get('symbols', '$'))
 
     if not used:
         print 'Why did you even run this function?'
 
     return resdf, y
 
-def numclean(col, currency = '$'):
-    for curr in currency:
-        col = col.str.replace(curr,'')
+def numclean(col, symbols = '$'):
+    for sym in symbols:
+        col = col.str.replace(sym,'')
 
     if col.str.find('%').mean() == -1:
-        col = col.astype(float)
+        return col.astype(float)
     else:
         col = col.str.replace('%', '')
-        col = col.astype(float)/100
+        return col.astype(float)/100
 
-    return col
+
 
 def dummygen(df, dummys, linear = False, threshold = 0):
     n = df.shape[0]
